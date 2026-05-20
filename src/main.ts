@@ -1,14 +1,14 @@
 import type { LogFn } from './types';
+import Dropzone from 'dropzone';
 import { Archive } from 'libarchive.js';
 import { zip as zipAsync } from 'fflate';
-import Dropzone from 'dropzone';
 import { collectedFiles, extractRecursive, setProgress, showToast } from '@/features';
 import {
-  isArchive,
   formatSize,
   dropZone,
-  fileBtn,
-  fileList,
+  uploadBtn,
+  previewTemplate,
+  previewContainer,
   fileCount,
   actionRow,
   clearAllBtn,
@@ -21,75 +21,59 @@ import {
   resultList,
   downloadBtn,
   resetBtn,
-  ARCHIVE_ICON,
+  ARCHIVE_EXTENSIONS,
   FILE_ICONS,
   FILE_ICON_DEFAULT,
 } from '@/utils';
 
 Archive.init({ workerUrl: '/worker-bundle.js' });
 
-const previewTemplate = `
-  <div class="file-item">
-    <span class="file-icon">${ARCHIVE_ICON}</span>
-    <span class="file-name"></span>
-    <span class="file-size"></span>
-    <button class="remove-btn" data-dz-remove aria-label="제거">✕</button>
-  </div>`;
-
 let batchProcessing = false;
 
 const dropzone = new Dropzone(dropZone, {
+  url: '#',
   autoProcessQueue: false,
-  previewsContainer: fileList,
-  previewTemplate,
-  clickable: [dropZone, fileBtn],
-});
-
-// 파일별 이름·사이즈 텍스트 주입
-dropzone.on('addedfile', file => {
-  const el = file.previewElement;
-  const nameEl = el.querySelector('.file-name') as HTMLElement | null;
-
-  if (nameEl) {
-    nameEl.textContent = file.name;
-    nameEl.title = file.name;
-  }
-
-  const sizeEl = el.querySelector('.file-size');
-  if (sizeEl) sizeEl.textContent = formatSize(file.size);
+  previewsContainer: previewContainer,
+  previewTemplate: previewTemplate.innerHTML,
+  clickable: [dropZone, uploadBtn],
+  acceptedFiles: [...ARCHIVE_EXTENSIONS].join(','),
 });
 
 // 드롭/선택 완료 후 일괄 유효성 검사
 dropzone.on('addedfiles', newFiles => {
   batchProcessing = true;
 
-  const newFilesSet = new Set(newFiles);
+  const validNewFiles = newFiles.filter(f => f.accepted !== false);
+  if (validNewFiles.length === 0) return;
+
+  const newFilesSet = new Set(validNewFiles);
+
+  // 이미 목록에 존재하던 파일들의 이름 목록
   const existingNames = new Set(
     dropzone
       .getAcceptedFiles()
       .filter(f => !newFilesSet.has(f))
       .map(f => f.name),
   );
-  const batchNames = new Set<string>();
-  let nonArchiveCount = 0;
-  let addedCount = 0;
 
-  for (const file of newFiles) {
-    if (!isArchive(file.name)) {
+  const batchNames = new Set<string>();
+  let duplicateCount = 0;
+
+  for (const file of validNewFiles) {
+    // 기존에 있던 파일명과 겹치거나, 이번에 같이 올린 파일명과 겹치면 제거
+    if (existingNames.has(file.name) || batchNames.has(file.name)) {
       dropzone.removeFile(file);
-      nonArchiveCount++;
-    } else if (existingNames.has(file.name) || batchNames.has(file.name)) {
-      dropzone.removeFile(file);
+      duplicateCount++;
     } else {
       batchNames.add(file.name);
-      addedCount++;
     }
   }
 
   batchProcessing = false;
 
-  if (addedCount === 0 && nonArchiveCount > 0) showToast('압축 파일을 선택해 주세요!', 'error');
-  else if (nonArchiveCount > 0) showToast(`압축 파일이 아닌 ${nonArchiveCount}개 파일은 건너뜁니다.`);
+  if (duplicateCount > 0) {
+    showToast(`이름이 중복된 파일 ${duplicateCount}개는 제외되었습니다.`, 'error');
+  }
 
   updateUI();
 });
@@ -100,15 +84,14 @@ dropzone.on('removedfile', () => {
 });
 
 function updateUI(): void {
-  const count = dropzone.getAcceptedFiles().length;
-  if (count === 0) {
-    fileList.classList.add('hidden');
+  const acceptedCount = dropzone.getAcceptedFiles().length;
+
+  if (acceptedCount === 0) {
     fileCount.textContent = '';
     extractBtn.disabled = true;
     clearAllBtn.classList.add('hidden');
   } else {
-    fileList.classList.remove('hidden');
-    fileCount.textContent = `${count}개 파일 선택됨`;
+    fileCount.textContent = `${acceptedCount}개 파일 선택됨`;
     extractBtn.disabled = false;
     clearAllBtn.classList.remove('hidden');
   }
@@ -123,7 +106,7 @@ async function runExtraction(): Promise<void> {
   extractBtn.disabled = true;
   dropZone.classList.add('hidden');
   actionRow.classList.add('hidden');
-  fileList.classList.add('locked');
+  previewContainer.classList.add('locked');
   collectedFiles.clear();
 
   progressSec.classList.remove('hidden');
@@ -225,7 +208,7 @@ resetBtn.addEventListener('click', () => {
 
   dropZone.classList.remove('hidden');
   actionRow.classList.remove('hidden');
-  fileList.classList.remove('locked');
+  previewContainer.classList.remove('locked');
   progressSec.classList.add('hidden');
   resultSec.classList.add('hidden');
   progressLogArea.innerHTML = '';

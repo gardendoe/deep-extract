@@ -103,7 +103,7 @@ body {
 }
 
 /* ── Drop Zone ── */
-.drop-zone {
+.dropzone-container {
   border: 2px dashed var(--border-light);
   border-radius: var(--radius);
   padding: 3rem 2rem;
@@ -116,20 +116,20 @@ body {
   position: relative;
 }
 
-.drop-zone:hover,
-.drop-zone.hoverable:hover {
+.dropzone-container:hover,
+.dropzone-container.hoverable:hover {
   border-color: var(--accent);
   background: var(--accent-glow);
 }
 
-.drop-zone.drag-over,
-.drop-zone.dz-drag-hover {
+.dropzone-container.drag-over,
+.dropzone-container.dz-drag-hover {
   border-color: var(--accent);
   background: var(--accent-glow);
   box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
 }
 
-.drop-inner {
+.dropzone-inner {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -137,31 +137,31 @@ body {
   pointer-events: none;
 }
 
-.drop-icon {
+.dropzone-icon {
   color: var(--text-dim);
   margin-bottom: 0.5rem;
   transition: color 0.2s;
 }
 
-.drop-zone:hover .drop-icon,
-.drop-zone.drag-over .drop-icon,
-.drop-zone.dz-drag-hover .drop-icon {
+.dropzone-container:hover .dropzone-icon,
+.dropzone-container.drag-over .dropzone-icon,
+.dropzone-container.dz-drag-hover .dropzone-icon {
   color: var(--accent);
 }
 
-.drop-title {
+.dropzone-title {
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--text);
 }
 
-.drop-sub {
+.dropzone-sub {
   color: var(--text-muted);
   font-size: 0.8125rem;
 }
 
-/* ── File List ── */
-.file-list {
+/* ── File Preview ── */
+.file-preview-container {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -171,7 +171,7 @@ body {
 
 .file-item {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 0.625rem;
   background: var(--surface2);
   border: 1px solid var(--border);
@@ -182,6 +182,12 @@ body {
 
 .file-item:hover {
   border-color: var(--border-light);
+}
+
+.file-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
 }
 
 .file-icon {
@@ -224,7 +230,7 @@ body {
   background: rgba(239, 68, 68, 0.1);
 }
 
-.file-list.locked .remove-btn {
+.file-preview-container.locked .remove-btn {
   display: none;
 }
 

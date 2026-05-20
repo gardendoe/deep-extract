@@ -4,9 +4,10 @@ function getElement<T extends HTMLElement>(id: string): T {
   return element as T;
 }
 
-export const dropZone = getElement<HTMLFormElement>('drop-zone');
-export const fileBtn = getElement<HTMLButtonElement>('file-btn');
-export const fileList = getElement<HTMLUListElement>('file-list');
+export const dropZone = getElement<HTMLDivElement>('dropzone-container');
+export const uploadBtn = getElement<HTMLButtonElement>('dropzone-upload-btn');
+export const previewTemplate = getElement<HTMLTemplateElement>('file-preview-template');
+export const previewContainer = getElement<HTMLUListElement>('file-preview-container');
 export const fileCount = getElement<HTMLSpanElement>('file-count');
 export const actionRow = getElement<HTMLDivElement>('action-row');
 export const clearAllBtn = getElement<HTMLButtonElement>('clear-all-btn');

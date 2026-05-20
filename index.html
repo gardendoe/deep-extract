@@ -35,11 +35,11 @@
       </header>
 
       <main class="main">
-        <!-- Drop Zone -->
         <section class="card upload-section">
-          <form id="drop-zone" class="drop-zone" action="/">
-            <div class="drop-inner">
-              <div class="drop-icon">
+          <!-- Dropzone -->
+          <div id="dropzone-container" class="dropzone-container">
+            <div class="dropzone-inner">
+              <div class="dropzone-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 640 640">
                   <path
                     fill="currentColor"
@@ -48,14 +48,27 @@
                 </svg>
               </div>
 
-              <p class="drop-title">압축 파일을 여기에 드래그</p>
-              <p class="drop-sub">또는</p>
-              <button id="file-btn" type="button" class="btn btn-outline">파일 업로드</button>
+              <p class="dropzone-title">압축 파일을 여기에 드래그</p>
+              <p class="dropzone-sub">또는</p>
+              <button id="dropzone-upload-btn" class="btn btn-outline">파일 업로드</button>
             </div>
-          </form>
+          </div>
 
-          <!-- File List -->
-          <ul id="file-list" class="file-list hidden"></ul>
+          <!-- File Preview -->
+          <ul id="file-preview-container" class="file-preview-container"></ul>
+
+          <template id="file-preview-template">
+            <li class="file-item">
+              <div class="file-meta">
+                <span class="file-icon">📦</span>
+                <span class="file-name" data-dz-name></span>
+                <span class="file-size" data-dz-size></span>
+                <button class="remove-btn" data-dz-remove aria-label="제거">✕</button>
+              </div>
+
+              <div data-dz-errormessage></div>
+            </li>
+          </template>
 
           <div id="action-row" class="action-row">
             <span id="file-count" class="file-count"></span>
