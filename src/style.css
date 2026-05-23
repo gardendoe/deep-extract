@@ -35,6 +35,11 @@ body {
   min-height: 100vh;
 }
 
+ul,
+li {
+  list-style: none;
+}
+
 /* ── Header ── */
 .header {
   position: sticky;
@@ -170,9 +175,6 @@ body {
 }
 
 .file-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -329,7 +331,7 @@ body {
   color: var(--text-muted);
 }
 
-.progress-log-area {
+.progress-log {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -342,16 +344,16 @@ body {
   line-height: 1.8;
 }
 
-.progress-log-area .log-success {
+.progress-log .log-success {
   color: var(--success);
 }
-.progress-log-area .log-error {
+.progress-log .log-error {
   color: var(--error);
 }
-.progress-log-area .log-warning {
+.progress-log .log-warning {
   color: var(--warning);
 }
-.progress-log-area .log-inner {
+.progress-log .log-inner {
   color: var(--purple);
 }
 
@@ -419,27 +421,20 @@ body {
   margin-top: 1rem;
 }
 
-/* ── Toast ── */
-.toast {
-  position: fixed;
-  top: 1.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--surface2);
-  border: 1px solid var(--border-light);
-  color: var(--text);
-  padding: 0.75rem 1.25rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.875rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  z-index: 100;
-  max-width: 360px;
+/* ── Toastify ── */
+.toastify {
   text-align: center;
 }
 
-.toast.error {
-  border-color: var(--error);
+.toast-close:hover {
+  opacity: 0.2;
+}
+
+/* ── Dropzone error message ── */
+[data-dz-errormessage]:not(:empty) {
   color: var(--error);
+  font-size: 0.75rem;
+  margin-top: 4px;
 }
 
 /* ── Utilities ── */
