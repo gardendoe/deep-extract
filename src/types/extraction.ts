@@ -1,12 +1,13 @@
 import type { ExtractedFile } from './archive';
 
+export type LogType = 'line' | 'spacer';
 export type LogLevel = 'default' | 'info' | 'success' | 'warning' | 'error';
 
-export interface LogEntry {
+export type LogEntry = {
   id: string;
   level: LogLevel;
   message: string;
-}
+};
 
 /**
  * 추출 방식 옵션 (향후 기능 확장용)
@@ -25,7 +26,6 @@ export interface ExtractionOptions {
 export type ExtractionStatus = 'idle' | 'extracting' | 'done' | 'error';
 
 export interface ExtractionState {
-  uploadedFiles: File[];
   status: ExtractionStatus;
   progress: number; // 0 ~ 100
   logs: LogEntry[];
@@ -33,18 +33,17 @@ export interface ExtractionState {
   downloadUrl: string | null;
   options: ExtractionOptions;
   totalArchives: number;
+  durationMs?: number;
+  errorMessage?: string;
 }
 
 export type ExtractionAction =
-  | { type: 'FILES_ADDED'; payload: File[] }
-  | { type: 'FILE_REMOVED'; payload: string }
-  | { type: 'ALL_FILES_CLEARED' }
-  | { type: 'EXTRACTION_STARTED' }
+  | { type: 'EXTRACTION_STARTED'; payload: { totalArchives: number } }
   | { type: 'PROGRESS_UPDATED'; payload: number }
   | { type: 'LOG_ADDED'; payload: { level: LogLevel; message: string } }
   | { type: 'FILE_EXTRACTED'; payload: ExtractedFile }
   | { type: 'DOWNLOAD_URL_SET'; payload: string }
-  | { type: 'EXTRACTION_COMPLETED' }
+  | { type: 'EXTRACTION_COMPLETED'; payload?: { durationMs: number } }
   | { type: 'EXTRACTION_FAILED'; payload: string }
   | { type: 'RESET' }
   | { type: 'OPTIONS_CHANGED'; payload: Partial<ExtractionOptions> };

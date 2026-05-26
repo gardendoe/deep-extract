@@ -1,4 +1,4 @@
-import { ARCHIVE_EXTENSIONS, FILE_ICONS, FILE_ICON_DEFAULT } from './constants';
+import { ARCHIVE_EXTENSIONS, EMOJI_FILE_DEFAULT, EMOJI_EXTENSIONS } from './constants';
 
 export function isArchive(fileName: string): boolean {
   const lower = fileName.trim().toLowerCase();
@@ -21,12 +21,8 @@ export function formatSize(bytes: number): string {
   if (bytes < KB) return `${bytes} B`;
   if (bytes < MB) return `${(bytes / KB).toFixed(1)} KB`;
   if (bytes < GB) return `${(bytes / MB).toFixed(1)} MB`;
-  return `${(bytes / GB).toFixed(2)} GB`;
-}
 
-export function getFileIcon(fileName: string): string {
-  const ext = fileName.toLowerCase().split('.').pop() ?? '';
-  return FILE_ICONS[ext] ?? FILE_ICON_DEFAULT;
+  return `${(bytes / GB).toFixed(2)} GB`;
 }
 
 /** 파일명 중복 시 숫자 접미사 붙여 고유하게 만들기 (e.g. "file (1).txt") */
@@ -44,4 +40,14 @@ export function deduplicateName(name: string, usedNames: Set<string>): string {
     candidate = `${base} (${counter})${ext}`;
   }
   return candidate;
+}
+
+export function getFileExtension(fileName: string): string | undefined {
+  return fileName.toLowerCase().split('.').pop();
+}
+
+export function getEmoji(fileName: string): string {
+  const extension = getFileExtension(fileName);
+  if (!extension) return EMOJI_FILE_DEFAULT;
+  return EMOJI_EXTENSIONS[extension] ?? EMOJI_FILE_DEFAULT;
 }

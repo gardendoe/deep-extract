@@ -1,13 +1,13 @@
 import type { ExtractionState, ExtractionAction, LogEntry } from '@/types';
+import { MAX_FILE_DEPTH } from '@/lib';
 
 export const DEFAULT_OPTIONS: ExtractionState['options'] = {
   mode: 'flatten',
   encoding: 'utf-8',
-  maxDepth: 12,
+  maxDepth: MAX_FILE_DEPTH,
 };
 
 export const initialState: ExtractionState = {
-  uploadedFiles: [],
   status: 'idle',
   progress: 0,
   logs: [],
@@ -21,23 +21,8 @@ function makeLog(level: LogEntry['level'], message: string): LogEntry {
   return { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, level, message };
 }
 
-export function extractionReducer(
-  state: ExtractionState,
-  action: ExtractionAction,
-): ExtractionState {
+export function extractionReducer(state: ExtractionState, action: ExtractionAction): ExtractionState {
   switch (action.type) {
-    case 'FILES_ADDED':
-      return { ...state, uploadedFiles: [...state.uploadedFiles, ...action.payload] };
-
-    case 'FILE_REMOVED':
-      return {
-        ...state,
-        uploadedFiles: state.uploadedFiles.filter((f) => f.name !== action.payload),
-      };
-
-    case 'ALL_FILES_CLEARED':
-      return { ...state, uploadedFiles: [] };
-
     case 'EXTRACTION_STARTED':
       return {
         ...state,
@@ -46,7 +31,7 @@ export function extractionReducer(
         logs: [],
         extractedFiles: [],
         downloadUrl: null,
-        totalArchives: state.uploadedFiles.length,
+        totalArchives: action.payload.totalArchives,
       };
 
     case 'PROGRESS_UPDATED':
@@ -71,6 +56,7 @@ export function extractionReducer(
       return {
         ...state,
         status: 'error',
+        errorMessage: action.payload,
         logs: [...state.logs, makeLog('error', `추출 실패: ${action.payload}`)],
       };
 
