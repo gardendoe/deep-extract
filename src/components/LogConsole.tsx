@@ -1,7 +1,7 @@
-import type { LogEntry } from '@/types';
+import type { LogEntry, LogType } from '@/types';
 import { useRef, useEffect } from 'react';
 import { Panel } from '@/components';
-import { writeLogs, cn } from '@/lib';
+import { cn } from '@/utils';
 
 type LogConsoleProps = { logs: LogEntry[] };
 
@@ -13,8 +13,19 @@ const LOG_LEVEL_COLOR: Record<LogEntry['level'], string> = {
   error: 'text-error',
 };
 
+function writeLog(logs: LogEntry[]): (LogEntry & { type: LogType })[] {
+  return logs.flatMap((log) =>
+    log.message.split('\n').map((line, index) => ({
+      id: `${log.id}-${index}`,
+      type: line ? 'line' : 'spacer',
+      level: log.level,
+      message: line,
+    })),
+  );
+}
+
 export default function LogConsole({ logs }: LogConsoleProps) {
-  const logContent = writeLogs(logs);
+  const logContent = writeLog(logs);
   const consoleRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

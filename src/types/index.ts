@@ -1,2 +1,3 @@
 export * from './archive';
-export * from './extraction';
+export * from './unpack';
+export * from './worker';

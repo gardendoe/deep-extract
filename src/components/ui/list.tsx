@@ -1,6 +1,6 @@
 import { X } from 'lucide-react';
 import { Button } from '@/components';
-import { cn, formatSize } from '@/lib';
+import { cn, formatSize } from '@/utils';
 
 type ListProps = React.ComponentProps<'ul'>;
 

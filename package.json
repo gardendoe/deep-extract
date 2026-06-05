@@ -4,50 +4,47 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "setup": "node scripts/copy-worker.js",
-    "dev": "npm run setup && vite",
-    "build": "npm run setup && tsc -b && vite build",
+    "dev": "vite",
+    "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@zip.js/zip.js": "^2.8.26",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "fflate": "^0.8.3",
-    "libarchive.js": "^2.0.2",
-    "lucide-react": "^1.17.0",
-    "motion": "^12.40.0",
-    "radix-ui": "^1.4.3",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
+    "lucide-react": "^1.20.0",
+    "radix-ui": "^1.6.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "react-dropzone": "^15.0.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@tailwindcss/vite": "^4.3.0",
-    "@types/node": "^25.9.1",
-    "@types/react": "^19.2.15",
+    "@tailwindcss/vite": "^4.3.1",
+    "@types/node": "^25.9.3",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
-    "eslint": "^10.4.0",
+    "eslint": "^10.5.0",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
+    "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.6.0",
-    "prettier": "^3.8.3",
+    "prettier": "^3.8.4",
     "prettier-plugin-tailwindcss": "^0.8.0",
-    "tailwindcss": "^4.3.0",
+    "tailwindcss": "^4.3.1",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.60.0",
-    "vite": "^8.0.14",
+    "typescript-eslint": "^8.61.1",
+    "vite": "^8.0.16",
     "vite-plugin-svgr": "^5.2.0"
   },
   "prettier": {
     "plugins": [
       "prettier-plugin-tailwindcss"
     ],
-    "printWidth": 120,
+    "printWidth": 150,
     "singleQuote": true
   }
 }

@@ -1,9 +1,14 @@
-import { MotionConfig, AnimatePresence } from 'motion/react';
-import { useExtraction } from '@/hooks';
-import { Toaster, Header, Main, Dropzone, Extraction, Result, Error, Footer } from '@/components';
+import { useState, useCallback } from 'react';
+import { useUnpack } from '@/hooks';
+import { Toaster, Header, Main, Compatibility, Dropzone, Extraction, Result, Error, Support, Footer } from '@/components';
 
 export default function App() {
-  const { state, extractAsync, reset } = useExtraction();
+  const { state, unpackAsync, cancel, reset } = useUnpack();
+  const [dropzoneKey, setDropzoneKey] = useState(0);
+  const handleReset = useCallback(async () => {
+    setDropzoneKey((k) => k + 1);
+    await reset();
+  }, [reset]);
 
   const isIdle = state.status === 'idle';
   const isExtracting = state.status === 'extracting';
@@ -11,35 +16,31 @@ export default function App() {
   const isError = state.status === 'error';
 
   return (
-    <MotionConfig transition={{ type: 'tween', duration: 0.15 }}>
+    <>
       <Toaster />
 
-      <div className="flex min-h-screen flex-col *:shrink-0">
-        <Header />
+      <Header />
 
-        <Main>
-          {isIdle && <Dropzone onExtract={extractAsync} />}
+      <Main>
+        <Compatibility>
+          <Dropzone key={dropzoneKey} onExtract={unpackAsync} />
 
-          <AnimatePresence>
-            {(isExtracting || isDone) && (
-              <Extraction
-                key="extraction"
-                logs={state.logs}
-                progress={state.progress}
-                totalArchives={state.totalArchives}
-              />
-            )}
+          {!isIdle && (
+            <Extraction
+              logs={state.logs}
+              progress={state.progress}
+              totalArchives={state.totalArchives}
+              onCancel={isExtracting ? cancel : undefined}
+            />
+          )}
+          {isDone && <Result files={state.extractedFiles} downloadUrl={state.downloadUrl} onReset={handleReset} />}
+          {isError && <Error message={state.errorMessage} onReset={handleReset} />}
 
-            {isDone && (
-              <Result key="result" files={state.extractedFiles} downloadUrl={state.downloadUrl} onReset={reset} />
-            )}
+          <Support />
+        </Compatibility>
+      </Main>
 
-            {isError && <Error key="error" message={state.errorMessage} onReset={reset} />}
-          </AnimatePresence>
-        </Main>
-
-        <Footer />
-      </div>
-    </MotionConfig>
+      <Footer />
+    </>
   );
 }

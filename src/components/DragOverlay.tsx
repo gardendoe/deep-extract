@@ -1,14 +1,8 @@
-import { motion } from 'motion/react';
 import { FileArchive } from 'lucide-react';
-import { motionVariants } from '@/lib';
 
 export default function DragOverlay() {
   return (
-    <motion.div
-      variants={motionVariants}
-      initial={['hidden', 'down']}
-      animate={['visible', 'center']}
-      exit={['hidden', 'down']}
+    <div
       aria-hidden="true"
       className="bg-background/85 from-primary/10 absolute inset-0 z-50 flex size-full items-center justify-center bg-radial to-transparent to-70% backdrop-blur-sm"
     >
@@ -16,6 +10,6 @@ export default function DragOverlay() {
         <FileArchive className="text-primary size-20" />
         <p className="text-foreground text-3xl font-semibold">파일을 여기에 놓으세요</p>
       </div>
-    </motion.div>
+    </div>
   );
 }

@@ -63,7 +63,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans text-sm;
+    @apply bg-background text-foreground min-h-screen font-sans text-sm;
   }
 
   button:not(:disabled),
@@ -84,6 +84,6 @@
 
 @layer components {
   .layout {
-    @apply mx-auto w-full max-w-180;
+    @apply mx-auto w-full max-w-200;
   }
 }

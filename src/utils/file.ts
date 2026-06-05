@@ -1,17 +1,4 @@
-import { ARCHIVE_EXTENSIONS, EMOJI_FILE_DEFAULT, EMOJI_EXTENSIONS } from './constants';
-
-export function isArchive(fileName: string): boolean {
-  const lower = fileName.trim().toLowerCase();
-  const parts = lower.split('.').filter(Boolean);
-
-  // 이중 확장자 검사 (e.g. tar.gz, tar.bz2)
-  const doubleExt = parts.slice(-2).join('.');
-  if (ARCHIVE_EXTENSIONS.has(doubleExt)) return true;
-
-  // 단일 확장자 검사
-  const singleExt = parts[parts.length - 1] ?? '';
-  return ARCHIVE_EXTENSIONS.has(singleExt);
-}
+import { EMOJI_FILE_DEFAULT, EMOJI_EXTENSIONS } from '@/constants';
 
 export function formatSize(bytes: number): string {
   const KB = 1024;
@@ -50,4 +37,27 @@ export function getEmoji(fileName: string): string {
   const extension = getFileExtension(fileName);
   if (!extension) return EMOJI_FILE_DEFAULT;
   return EMOJI_EXTENSIONS[extension] ?? EMOJI_FILE_DEFAULT;
+}
+
+/**
+ * ZIP 항목 경로에서 안전한 파일명만 뽑아낸다.
+ * @param entryPath ZIP 항목 경로
+ * @returns 안전한 파일명
+ */
+export function basename(entryPath: string): string | null {
+  const normalized = entryPath.replace(/\\/g, '/'); // 윈도우식 역슬래시(\)를 슬래시(/)로 통일
+  if (/^(\/|[a-zA-Z]:\/|\/{2})/.test(normalized)) return null; // 절대 경로 형태(/..., C:/..., //... 등)면 위험하므로 거부
+
+  const segments = normalized.split('/').filter(Boolean);
+  for (const segment of segments) {
+    if (segment === '..') return null; // 경로 어딘가에 ..(상위 디렉터리 이동)이 있으면 거부
+  }
+
+  const raw = segments[segments.length - 1]; // 폴더 구조는 버리고 실제 파일명만 평탄화해서 사용
+  if (!raw || raw === '.') return null;
+
+  const sanitized = raw.replace(/[\p{Cc}:*?"<>|]/gu, '_').trim(); // 제어 문자, 특수문자를 언더스코어로 치환
+  if (!sanitized || /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\.|$)/i.test(sanitized)) return null; // 빈 문자열, 윈도우 예약어 거부
+
+  return sanitized;
 }

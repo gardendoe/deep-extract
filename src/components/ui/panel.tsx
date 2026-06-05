@@ -1,4 +1,4 @@
-import { cn } from '@/lib';
+import { cn } from '@/utils';
 
 type PanelProps = React.ComponentProps<'div'> & {
   title: string;

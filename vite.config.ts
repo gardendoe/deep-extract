@@ -11,9 +11,6 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  optimizeDeps: {
-    exclude: ['libarchive.js'],
-  },
   server: {
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',

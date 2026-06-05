@@ -1,5 +1,5 @@
 import { type VariantProps, cva } from 'class-variance-authority';
-import { cn } from '@/lib';
+import { cn } from '@/utils';
 
 type ButtonProps = React.ComponentProps<'button'> & VariantProps<typeof buttonVariants>;
 
