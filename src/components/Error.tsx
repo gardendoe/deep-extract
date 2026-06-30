@@ -2,7 +2,7 @@ import { AlertTriangle, RotateCcw } from 'lucide-react';
 import { Button, Card } from '@/components';
 
 type ErrorStateProps = {
-  message?: string;
+  message: string | null;
   onReset: () => void;
 };
 

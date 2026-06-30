@@ -9,7 +9,7 @@ export default function App() {
   }, [reset]);
 
   const isIdle = state.status === 'idle';
-  const isExtracting = state.status === 'extracting';
+  const isProcessing = state.status === 'processing';
   const isDone = state.status === 'done';
   const isError = state.status === 'error';
 
@@ -24,10 +24,10 @@ export default function App() {
           {isIdle ? (
             <Dropzone onExtract={unpackAsync} />
           ) : (
-            <Extraction progress={state.progress} totalArchives={state.totalArchives} onCancel={isExtracting ? cancel : undefined} />
+            <Extraction progress={state.progress} totalArchives={state.totalArchives} onCancel={isProcessing ? cancel : undefined} />
           )}
 
-          {isDone && <Result files={state.extractedFiles} failedItems={state.failedItems} downloadUrl={state.downloadUrl} onReset={handleReset} />}
+          {isDone && <Result succeeded={state.succeeded} failed={state.failed} downloadUrl={state.downloadUrl} onReset={handleReset} />}
           {isError && <Error message={state.errorMessage} onReset={handleReset} />}
 
           <Support />

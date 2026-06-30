@@ -39,7 +39,7 @@ export default function useUnpack() {
   }, []);
 
   /** 압축 파일 목록을 받아서 압축 해제 → 재압축 → 다운로드 URL 생성까지 실행한다. */
-  const unpackAsync = useCallback(async (files: File[]) => {
+  const unpackAsync = useCallback(async (zipFiles: File[]) => {
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
     const { signal } = abortController;
@@ -47,11 +47,11 @@ export default function useUnpack() {
     // 현재 signal이 aborted(취소)된 상태인지 확인한다. (중간에 계속 취소 여부를 재확인하고 빠져나가는 용도)
     const handleAbortedIf = async (): Promise<boolean> => {
       if (!signal.aborted) return false;
-      if (signal.reason !== 'reset') dispatch({ type: 'EXTRACTION_CANCELLED' });
+      if (signal.reason !== 'reset') dispatch({ type: 'CANCELLED' });
       return true;
     };
 
-    dispatch({ type: 'EXTRACTION_STARTED', payload: { totalArchives: files.length } });
+    dispatch({ type: 'STARTED', payload: { totalArchives: zipFiles.length } });
 
     // 이전 unpackAsync() 실행이 남긴 세션 리소스 정리
     if (disposeRef.current) {
@@ -61,7 +61,7 @@ export default function useUnpack() {
 
     const packer = Packer.create();
     if (!packer) {
-      dispatch({ type: 'EXTRACTION_FAILED', payload: '지원되지 않는 브라우저입니다.' });
+      dispatch({ type: 'ERROR', payload: '지원되지 않는 브라우저입니다.' });
       abortControllerRef.current = null;
       return;
     }
@@ -77,7 +77,7 @@ export default function useUnpack() {
       abortPacker();
 
       if (signal.reason !== 'reset') {
-        dispatch({ type: 'EXTRACTION_CANCELLED' });
+        dispatch({ type: 'CANCELLED' });
       }
 
       return;
@@ -89,18 +89,18 @@ export default function useUnpack() {
 
       // 압축 해제 시작
       await Unpacker.unpackAsync(
-        files,
+        zipFiles,
         optionsRef.current,
         {
           onFile: async (file) => {
             const queued = await packer.enqueueFileAsync(file);
             if (queued) {
               queuedCount++;
-              dispatch({ type: 'FILE_EXTRACTED', payload: { name: file.name, size: file.size } });
+              dispatch({ type: 'FILE_UNPACKED', payload: { name: file.name, size: file.size } });
             }
           },
-          onProgress: (progress) => dispatch({ type: 'PROGRESS_UPDATED', payload: progress }),
-          onFailed: (item) => dispatch({ type: 'ITEM_FAILED', payload: item }),
+          onProgress: (progress) => dispatch({ type: 'UPDATE_PROGRESS', payload: progress }),
+          onFailed: (zip) => dispatch({ type: 'ZIP_FAILED', payload: zip }),
         },
         signal,
       );
@@ -113,7 +113,7 @@ export default function useUnpack() {
         await packer.abortAsync();
         if (await handleAbortedIf()) return;
 
-        dispatch({ type: 'EXTRACTION_FAILED', payload: '압축 해제된 파일이 없습니다.' });
+        dispatch({ type: 'ERROR', payload: '압축 해제된 파일이 없습니다.' });
         return;
       }
 
@@ -122,15 +122,15 @@ export default function useUnpack() {
 
       if (await handleAbortedIf()) return;
 
-      dispatch({ type: 'DOWNLOAD_URL_SET', payload: url });
-      dispatch({ type: 'EXTRACTION_COMPLETED' });
+      dispatch({ type: 'DOWNLOAD_READY', payload: url });
+      dispatch({ type: 'DONE' });
     } catch (error) {
       // 잡힌 error가 abort로 인한 것이라면 이미 cancel 처리됐으므로 여기서 종료한다.
       if (await handleAbortedIf()) return;
 
-      // abort가 아닌 실제 런타임 오류의 경우, Packer 자원을 정리하고 EXTRACTION_FAILED로 전환한다.
+      // abort가 아닌 실제 런타임 오류의 경우, Packer 자원을 정리하고 ERROR 상태로 전환한다.
       await packer.abortAsync();
-      dispatch({ type: 'EXTRACTION_FAILED', payload: error instanceof Error ? error.message : String(error) });
+      dispatch({ type: 'ERROR', payload: error instanceof Error ? error.message : String(error) });
     } finally {
       signal.removeEventListener('abort', abortPacker);
       abortControllerRef.current = null;

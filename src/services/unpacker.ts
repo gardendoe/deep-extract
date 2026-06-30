@@ -1,4 +1,4 @@
-import type { UnpackedFile, FailedItem, UnpackOptions } from '@/types';
+import type { UnpackedFile, FailedZIP, UnpackOptions } from '@/types';
 import { type Entry, ZipReader, BlobReader } from '@zip.js/zip.js';
 import {
   OPFS_SUPPORTED,
@@ -15,7 +15,7 @@ import { ZipBombDetectedError, basename, deduplicateName } from '@/utils';
 type UnpackCallbacks = {
   onFile: (file: UnpackedFile) => Promise<void>;
   onProgress: (progress: number) => void;
-  onFailed: (item: FailedItem) => void;
+  onFailed: (item: FailedZIP) => void;
 };
 
 /** 압축 해제 실패 사유 (사용자 친화적일 것) */
