@@ -88,7 +88,7 @@ export default function useUnpack() {
       let queuedCount = 0;
 
       // 압축 해제 시작
-      const { skippedCount, errorCount } = await Unpacker.unpackAsync(
+      await Unpacker.unpackAsync(
         files,
         optionsRef.current,
         {
@@ -111,24 +111,16 @@ export default function useUnpack() {
       // finalizeAsync()로 ZIP을 완성하는 대신 abortAsync()로 압축 작업을 중단한다.
       if (queuedCount === 0) {
         await packer.abortAsync();
-
         if (await handleAbortedIf()) return;
 
-        const totalFailed = skippedCount + errorCount;
-        const message =
-          totalFailed > 0
-            ? '추출 가능한 파일이 없습니다. 압축 파일을 열거나 해제하지 못했습니다.'
-            : '추출된 파일이 없습니다. 압축 파일이 비어 있거나 지원되지 않는 형식입니다.';
-
-        dispatch({ type: 'EXTRACTION_FAILED', payload: message });
+        dispatch({ type: 'EXTRACTION_FAILED', payload: '압축 해제된 파일이 없습니다.' });
         return;
       }
 
-      const { url, dispose, errorCount: packErrors } = await packer.finalizeAsync();
+      const { url, dispose } = await packer.finalizeAsync();
       disposeRef.current = dispose; // 다음 실행 or reset 시 정리하도록 보관
 
       if (await handleAbortedIf()) return;
-      if (packErrors > 0) dispatch({ type: 'ITEM_FAILED', payload: { name: '(재압축 단계)', reason: '재압축 오류' } });
 
       dispatch({ type: 'DOWNLOAD_URL_SET', payload: url });
       dispatch({ type: 'EXTRACTION_COMPLETED' });

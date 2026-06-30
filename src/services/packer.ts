@@ -22,10 +22,6 @@ export default class Packer {
   // 동시에 워커로 보낼 수 있는 파일 개수 한도 (백프레셔 기준값)
   private static readonly WORKER_QUEUE_SIZE = 2;
 
-  // 파일 처리 결과 집계
-  private skippedCount = 0;
-  private errorCount = 0;
-
   // 압축 작업의 핵심 리소스: finalize/abort 시 항상 함께 정리해야 한다.
   private worker: WorkerProxy<WorkerInMsg, WorkerOutMsg> | null = null; // 엄격한 타입 체크를 위한 Worker 래퍼 클래스
   private workerSessionName: string | null = null; // OPFS 세션 폴더명
@@ -74,8 +70,6 @@ export default class Packer {
       // 파일 1개에 대한 응답
       if (data.type === 'ACK' || data.type === 'FILE_ERROR') {
         packer.workerPending--; // 응답이 하나 왔으므로 workerPending을 줄인다.
-
-        if (data.type === 'FILE_ERROR') packer.errorCount++;
 
         // enqueueFileAsync()에서 빈 자리를 기다리던 대기자 하나를 깨운다.
         packer.workerAckWaiters.shift()?.();
@@ -157,12 +151,7 @@ export default class Packer {
    * ZIP 스트림을 마무리하고, 완성된 파일의 다운로드 URL과 정리 함수를 반환한다.
    * @returns `{ url: 다운로드 URL, dispose: URL 해제 + OPFS 세션 폴더 삭제 + Web Lock 해제 함수 }`
    */
-  async finalizeAsync(): Promise<{
-    url: string;
-    dispose: () => Promise<void>;
-    skippedCount: number;
-    errorCount: number;
-  }> {
+  async finalizeAsync(): Promise<{ url: string; dispose: () => Promise<void> }> {
     if (!this.workerResultPromise) throw new Error('내부 오류: 워커 결과 Promise가 없습니다.');
 
     // workerSessionName을 null로 비워서 OPFS 세션 폴더 소유권을 가져온다.
@@ -192,8 +181,6 @@ export default class Packer {
 
     return {
       url,
-      skippedCount: this.skippedCount,
-      errorCount: this.errorCount,
       dispose: async () => {
         URL.revokeObjectURL(url);
         await Packer.deleteOpfsSessionAsync(sessionName);
