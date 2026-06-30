@@ -5,11 +5,11 @@ export function formatSize(bytes: number): string {
   const MB = KB ** 2;
   const GB = KB ** 3;
 
-  if (bytes < KB) return `${bytes} B`;
-  if (bytes < MB) return `${(bytes / KB).toFixed(1)} KB`;
-  if (bytes < GB) return `${(bytes / MB).toFixed(1)} MB`;
+  if (bytes < KB) return `${bytes}B`;
+  if (bytes < MB) return `${(bytes / KB).toFixed(1)}KB`;
+  if (bytes < GB) return `${(bytes / MB).toFixed(1)}MB`;
 
-  return `${(bytes / GB).toFixed(2)} GB`;
+  return `${(bytes / GB).toFixed(2)}GB`;
 }
 
 /** 파일명 중복 시 숫자 접미사 붙여 고유하게 만들기 (e.g. "file (1).txt") */

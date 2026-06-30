@@ -9,6 +9,7 @@ export const OUTPUT_ZIP_NAME = 'output.zip';
 // Dropzone Config
 export const ACCEPT_EXTENSIONS = Object.freeze<Accept>({ 'application/zip': ['.zip'] }); // 허용되는 확장자
 export const FILE_MAX_COUNT = 20; // ZIP 업로드 개수 상한
+export const FILE_MIN_SIZE = 1_000; // 1KB - ZIP 크기 하한
 export const FILE_MAX_SIZE = 5_000_000_000; // 5GB - ZIP 크기 상한
 export const INPUT_MAX_TOTAL = 20_000_000_000; // 20GB — 총 입력(업로드) 크기 상한
 
