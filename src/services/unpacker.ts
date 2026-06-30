@@ -11,6 +11,23 @@ import {
 } from '@/constants';
 import { ZipBombDetectedError, basename, deduplicateName } from '@/utils';
 
+/** 압축 해제 진행/완료/오류를 UI로 알리기 위한 콜백 묶음 */
+type UnpackCallbacks = {
+  onFile: (file: UnpackedFile) => Promise<void>;
+  onProgress: (progress: number) => void;
+  onFailed: (item: FailedItem) => void;
+};
+
+/** 압축 해제 실패 사유 (사용자 친화적일 것) */
+const FailureReason = {
+  CORRUPTED: '손상된 파일',
+  TOO_MANY_ENTRIES: '파일 개수 초과',
+  SIZE_UNKNOWN: '비정상 파일',
+  RATIO_TOO_HIGH: '비정상 파일',
+  ENTRY_TOO_LARGE: '파일 크기 초과',
+  OUTPUT_TOO_LARGE: '총 용량 초과',
+} as const;
+
 /**
  * Unpacker
  *
@@ -22,13 +39,6 @@ import { ZipBombDetectedError, basename, deduplicateName } from '@/utils';
  *  → new Batch().processAsync() // 업로드된 ZIP 전체를 하나의 배치로 처리
  *   → (각 ZIP마다) new Pipeline(...).processZipAsync() → (각 Entry마다) processEntryAsync()
  */
-
-/** 압축 해제 진행/완료/오류를 UI로 알리기 위한 콜백 묶음 */
-export type UnpackCallbacks = {
-  onFile: (file: UnpackedFile) => Promise<void>;
-  onProgress: (progress: number) => void;
-  onFailed: (item: FailedItem) => void;
-};
 
 /** 압축 해제 작업의 진입점 */
 export default class Unpacker {
@@ -114,7 +124,7 @@ class Batch {
         if (error instanceof ZipBombDetectedError) throw error;
 
         // ZIP 자체가 손상됐거나 열 수 없는 경우 (Pipeline.processZipAsync에서 던져진 에러)
-        callbacks.onFailed({ name: files[i].name, reason: '열기 실패' });
+        callbacks.onFailed({ name: files[i].name, reason: FailureReason.CORRUPTED });
         this.errorCount++;
       }
 
@@ -159,7 +169,7 @@ class Pipeline {
       // ZIP 사전 검증 1: 항목 개수 상한 초과 시 ZIP 전체를 실패 처리한다.
       const entryCount = entries.filter((entry) => !entry.directory).length;
       if (entryCount > ENTRIES_MAX_COUNT) {
-        this.callbacks.onFailed({ name: this.zip.name, reason: '항목 개수 초과' });
+        this.callbacks.onFailed({ name: this.zip.name, reason: FailureReason.TOO_MANY_ENTRIES });
         return { skippedCount: 1 };
       }
 
@@ -173,19 +183,19 @@ class Pipeline {
         // ZIP 사전 검증 2: 압축 데이터는 있는데 ZIP Central Directory에 선언된 크기가 0인 경우
         // 손상된 ZIP 혹은 비표준 ZIP으로 간주하고 ZIP 전체를 실패 처리한다.
         if (entry.compressedSize > 0 && entry.uncompressedSize === 0) {
-          this.callbacks.onFailed({ name: this.zip.name, reason: '크기 확인 불가' });
+          this.callbacks.onFailed({ name: this.zip.name, reason: FailureReason.SIZE_UNKNOWN });
           return { skippedCount: 1 };
         }
 
         // ZIP 사전 검증 3: 항목별 압축 비율 상한을 초과한 경우 ZIP 전체를 실패 처리한다.
         if (entry.compressedSize > 0 && entry.uncompressedSize / entry.compressedSize > ENTRY_MAX_RATIO) {
-          this.callbacks.onFailed({ name: this.zip.name, reason: '압축 비율 초과' });
+          this.callbacks.onFailed({ name: this.zip.name, reason: FailureReason.RATIO_TOO_HIGH });
           return { skippedCount: 1 };
         }
 
         // ZIP 사전 검증 4: 항목별 출력 상한을 초과한 경우 ZIP 전체를 실패 처리한다.
         if (entry.uncompressedSize > ENTRY_MAX_UNCOMPRESSED) {
-          this.callbacks.onFailed({ name: this.zip.name, reason: '크기 초과' });
+          this.callbacks.onFailed({ name: this.zip.name, reason: FailureReason.ENTRY_TOO_LARGE });
           return { skippedCount: 1 };
         }
 
@@ -193,7 +203,7 @@ class Pipeline {
 
         // ZIP 사전 검증 5: 총 예상 누적치가 총 출력 상한을 초과할 경우 ZIP 전체를 실패 처리한다.
         if (projectedBytes > OUTPUT_MAX_TOTAL) {
-          this.callbacks.onFailed({ name: this.zip.name, reason: '출력 상한 초과' });
+          this.callbacks.onFailed({ name: this.zip.name, reason: FailureReason.OUTPUT_TOO_LARGE });
           return { skippedCount: 1 };
         }
       }

@@ -15,11 +15,24 @@ export interface UnpackOptions {
 }
 
 /**
- * 압축 해제 실패한 파일 정보
- * - `name`: 실패한 파일명
- * - `reason`: 실패 사유
+ * ZIP에서 추출된 파일
+ * - `size`: ZIP Central Directory 기준 예상 출력 크기 (`uncompressedSize`)
+ * - `stream`: 실제 압축 해제 데이터를 청크로 공급하는 {@link ReadableStream}
  */
+export type UnpackedFile = {
+  name: string;
+  size: number;
+  stream: ReadableStream<Uint8Array>;
+};
+
+/** 압축 해제 실패한 파일 */
 export type FailedItem = {
   name: string;
   reason: string;
+};
+
+/** UI 표시용 파일 메타 데이터 */
+export type FileMeta = {
+  name: string;
+  size: number;
 };
