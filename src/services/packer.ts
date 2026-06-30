@@ -67,33 +67,30 @@ export default class Packer {
     packer.workerResultResolve = workerResultResolve;
 
     worker.onmessage = ({ data }) => {
-      // 파일 1개에 대한 응답
+      // 파일 1개에 대한 응답이 온 경우
       if (data.type === 'ACK' || data.type === 'FILE_ERROR') {
         packer.workerPending--; // 응답이 하나 왔으므로 workerPending을 줄인다.
+
+        // FILE_ERROR 발생 시 해당 파일이 출력 ZIP에서 조용히 누락되므로,
+        // 불완전한 ZIP을 만들지 않기 위해 압축 작업 전체를 실패로 처리한다.
+        if (data.type === 'FILE_ERROR') {
+          worker.postMessage({ type: 'CANCEL' });
+          packer.settleResult({ type: 'ERROR', message: data.message });
+          return;
+        }
 
         // enqueueFileAsync()에서 빈 자리를 기다리던 대기자 하나를 깨운다.
         packer.workerAckWaiters.shift()?.();
       } else {
-        // 전체 압축 작업에 대한 최종 응답
-        packer.workerDone = true;
-        packer.workerPending = 0; // 더 이상 파일 단위 응답이 오지 않으므로 workerPending을 0으로 리셋한다.
-
-        // workerResultPromise를 resolve하고 모든 대기자를 깨운다.
-        packer.workerResultResolve?.(data);
-        while (packer.workerDoneWaiters.length > 0) packer.workerDoneWaiters.shift()?.();
-        while (packer.workerAckWaiters.length > 0) packer.workerAckWaiters.shift()?.();
+        // 전체 압축 작업에 대한 최종 응답이 온 경우
+        packer.settleResult(data);
       }
     };
 
     worker.onerror = ({ message }) => {
       // 워커 자체가 죽은 경우 (처리되지 않은 예외 등)
       // 대기 중인 Promise, 큐들이 영원히 멈춰있지 않도록 정리한다.
-      packer.workerDone = true;
-      packer.workerPending = 0;
-      packer.workerResultResolve?.({ type: 'ERROR', message });
-
-      while (packer.workerDoneWaiters.length > 0) packer.workerDoneWaiters.shift()?.();
-      while (packer.workerAckWaiters.length > 0) packer.workerAckWaiters.shift()?.();
+      packer.settleResult({ type: 'ERROR', message });
     };
 
     // 워커에게 이번 압축 결과를 어느 OPFS 폴더에 쓸지 알려준다.
@@ -174,7 +171,7 @@ export default class Packer {
       throw new Error(result.message);
     }
 
-    if (!sessionName) throw new Error('내부 오류: 워커 세션명이 없습니다.');
+    if (!sessionName) throw new Error('OPFS 세션 폴더가 존재하지 않습니다.');
 
     // OPFS에 완성된 압축 결과물을 열어서 다운로드 URL로 변환한다.
     const url = await Packer.createDownloadUrlAsync(sessionName);
@@ -267,6 +264,17 @@ export default class Packer {
     const url = URL.createObjectURL(zip);
 
     return url;
+  }
+
+  /** 압축 작업의 최종 결과를 확정하고 대기 중인 모든 곳에 알린다. */
+  private settleResult(result: WorkerResultMsg): void {
+    this.workerDone = true;
+    this.workerPending = 0; // 더 이상 파일 단위 응답이 오지 않으므로 workerPending을 0으로 리셋한다.
+    this.workerResultResolve?.(result);
+
+    // workerResultPromise를 resolve하고 모든 대기자를 깨운다.
+    while (this.workerDoneWaiters.length > 0) this.workerDoneWaiters.shift()?.();
+    while (this.workerAckWaiters.length > 0) this.workerAckWaiters.shift()?.();
   }
 
   /** {@link Packer.create}에서 잡아둔 Web Lock을 해제한다. */
