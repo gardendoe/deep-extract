@@ -27,7 +27,7 @@ export default class Packer {
   private errorCount = 0;
 
   // 압축 작업의 핵심 리소스: finalize/abort 시 항상 함께 정리해야 한다.
-  private worker: WorkerProxy<WorkerInMsg, WorkerOutMsg> | null = null;
+  private worker: WorkerProxy<WorkerInMsg, WorkerOutMsg> | null = null; // 엄격한 타입 체크를 위한 Worker 래퍼 클래스
   private workerSessionName: string | null = null; // OPFS 세션 폴더명
 
   // enqueueFileAsync()의 백프레셔 제어용
@@ -122,7 +122,7 @@ export default class Packer {
    * 한도(`WORKER_QUEUE_SIZE`)만큼 이미 보낸 상태면 빈 자리가 날 때까지 대기한다.
    * @returns 정상적으로 큐에 들어갔으면 `true`, 스킵됐으면 `false`
    */
-  async enqueueFileAsync({ stream, name, size }: UnpackedFile): Promise<boolean> {
+  async enqueueFileAsync(file: UnpackedFile): Promise<boolean> {
     // 백프레셔 (빈 자리가 날 때까지 대기)
     if (this.workerPending >= Packer.WORKER_QUEUE_SIZE) {
       // workerAckWaiters에 쌓여 있다가 ACK 응답 시 깨어난다.
@@ -133,14 +133,22 @@ export default class Packer {
 
     // 대기하는 동안 abortAsync() 호출 또는 워커 종료로 상태가 바뀌었을 수 있으므로 재확인한다.
     if (!this.worker || this.aborted || this.workerDone) {
-      stream.cancel().catch(() => {}); // 사용하지 않는 스트림은 명시적으로 취소한다.
+      file.stream.cancel().catch(() => {}); // 사용하지 않는 스트림은 명시적으로 취소한다.
       return false;
     }
 
     this.workerPending++;
 
     // stream을 복사하지 않고 워커로 소유권을 이전한다. (이후 메인 스레드에서 사용 불가)
-    this.worker.postMessage({ type: 'ADD_FILE', name, size, stream }, [stream]);
+    this.worker.postMessage(
+      {
+        type: 'ADD_FILE',
+        name: file.name,
+        size: file.size,
+        stream: file.stream,
+      },
+      [file.stream],
+    );
 
     return true;
   }

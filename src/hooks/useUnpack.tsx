@@ -28,8 +28,8 @@ export default function useUnpack() {
     // 마운트 시 OPFS 비활성 세션 폴더 정리
     void Unpacker.clearAsync();
 
+    // 페이지 이탈(뒤로 가기 포함) 시 진행 중인 작업을 중단하고 세션 리소스를 정리한다.
     const handlePageHide = () => {
-      // pagehide는 BFCache 진입 시에도 발생하므로 abort만 하고 상태는 건드리지 않는다
       abortControllerRef.current?.abort();
       disposeRef.current?.().catch(() => {});
     };
@@ -44,6 +44,7 @@ export default function useUnpack() {
     abortControllerRef.current = abortController;
     const { signal } = abortController;
 
+    // 현재 signal이 aborted(취소)된 상태인지 확인한다. (중간에 계속 취소 여부를 재확인하고 빠져나가는 용도)
     const handleAbortedIf = async (): Promise<boolean> => {
       if (!signal.aborted) return false;
       if (signal.reason !== 'reset') dispatch({ type: 'EXTRACTION_CANCELLED' });
@@ -65,10 +66,8 @@ export default function useUnpack() {
       return;
     }
 
-    let queuedCount = 0;
+    // signal abort 시 Packer가 진행중인 작업도 중단시킨다.
     const abortPacker = () => packer.abortAsync().catch(() => {});
-
-    // signal abort 시 Packer 워커도 함께 중단한다.
     signal.addEventListener('abort', abortPacker, { once: true });
 
     // addEventListener 등록 직후 이미 abort된 경우를 방어한다.
@@ -85,6 +84,9 @@ export default function useUnpack() {
     }
 
     try {
+      // Packer에 성공적으로 큐잉된 파일 개수
+      let queuedCount = 0;
+
       // 압축 해제 시작
       const { skippedCount, errorCount } = await Unpacker.unpackAsync(
         files,
@@ -105,7 +107,8 @@ export default function useUnpack() {
 
       if (await handleAbortedIf()) return;
 
-      // 큐에 파일이 없으면 Packer를 닫지 않고 중단한다.
+      // Packer에 큐잉된 파일이 하나도 없으면
+      // finalizeAsync()로 ZIP을 완성하는 대신 abortAsync()로 압축 작업을 중단한다.
       if (queuedCount === 0) {
         await packer.abortAsync();
 
@@ -130,13 +133,12 @@ export default function useUnpack() {
       dispatch({ type: 'DOWNLOAD_URL_SET', payload: url });
       dispatch({ type: 'EXTRACTION_COMPLETED' });
     } catch (error) {
+      // 잡힌 error가 abort로 인한 것이라면 이미 cancel 처리됐으므로 여기서 종료한다.
       if (await handleAbortedIf()) return;
 
-      // abort가 아닌 예외의 경우, Packer 정리 후 오류 상태로 전환한다.
+      // abort가 아닌 실제 런타임 오류의 경우, Packer 자원을 정리하고 EXTRACTION_FAILED로 전환한다.
       await packer.abortAsync();
-
-      const message = error instanceof Error ? error.message : String(error);
-      dispatch({ type: 'EXTRACTION_FAILED', payload: message });
+      dispatch({ type: 'EXTRACTION_FAILED', payload: error instanceof Error ? error.message : String(error) });
     } finally {
       signal.removeEventListener('abort', abortPacker);
       abortControllerRef.current = null;
