@@ -51,7 +51,7 @@ export default function useUnpack() {
       return true;
     };
 
-    dispatch({ type: 'STARTED', payload: { totalArchives: zipFiles.length } });
+    dispatch({ type: 'STARTED' });
 
     // 이전 unpackAsync() 실행이 남긴 세션 리소스 정리
     if (disposeRef.current) {

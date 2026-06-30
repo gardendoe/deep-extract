@@ -2,7 +2,6 @@ import type { FailedZIP, FileMeta, UnpackOptions } from '@/types';
 
 type UnpackState = {
   status: 'idle' | 'processing' | 'done' | 'error';
-  totalArchives: number;
   progress: number;
   failed: FailedZIP[];
   succeeded: FileMeta[];
@@ -12,7 +11,7 @@ type UnpackState = {
 };
 
 type UnpackAction =
-  | { type: 'STARTED'; payload: { totalArchives: number } }
+  | { type: 'STARTED' }
   | { type: 'UPDATE_PROGRESS'; payload: number }
   | { type: 'ZIP_FAILED'; payload: FailedZIP }
   | { type: 'FILE_UNPACKED'; payload: FileMeta }
@@ -25,7 +24,6 @@ type UnpackAction =
 
 export const initialState: UnpackState = {
   status: 'idle',
-  totalArchives: 0,
   progress: 0,
   failed: [],
   succeeded: [],
@@ -44,7 +42,6 @@ export function unpackReducer(state: UnpackState, action: UnpackAction): UnpackS
         failed: [],
         succeeded: [],
         downloadUrl: null,
-        totalArchives: action.payload.totalArchives,
       };
 
     case 'UPDATE_PROGRESS':
