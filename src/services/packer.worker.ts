@@ -134,15 +134,10 @@ class WorkerSession {
           // hasCorruptedEntries가 true이면 ZIP 구조가 손상됐을 수 있으므로 세션 전체를 에러 처리한다.
           if (zipWriter.hasCorruptedEntries) throw error instanceof Error ? error : new Error(String(error));
 
-          // PolicySkipError이고 ZIP이 깨끗한 경우에만 FILE_SKIP으로 처리해 세션을 유지한다.
-          if (error instanceof Error && error.name === 'PolicySkipError') {
-            postMessage({ type: 'FILE_SKIP' });
-          } else {
-            postMessage({
-              type: 'FILE_ERROR',
-              message: error instanceof Error ? error.message : String(error),
-            });
-          }
+          postMessage({
+            type: 'FILE_ERROR',
+            message: error instanceof Error ? error.message : String(error),
+          });
         }
       }
     } catch (error) {

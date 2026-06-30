@@ -1,17 +1,18 @@
-import type { FileMeta } from '@/types';
+import type { FailedItem, FileMeta } from '@/types';
 import { useMemo } from 'react';
-import { Check, RotateCcw, Download } from 'lucide-react';
+import { Check, ChevronDown, RotateCcw, Download } from 'lucide-react';
 import { Card, Button, Badge, Panel, List } from '@/components';
 import { EMOJI_EXTENSIONS } from '@/constants';
 import { getFileExtension, getEmoji, formatSize } from '@/utils';
 
 type ResultProps = {
   files: FileMeta[];
+  failedItems: FailedItem[];
   downloadUrl: string | null;
   onReset: () => void;
 };
 
-export default function Result({ files, downloadUrl, onReset }: ResultProps) {
+export default function Result({ files, failedItems, downloadUrl, onReset }: ResultProps) {
   const totalSize = files.reduce((total, file) => total + file.size, 0);
 
   const extensions = useMemo(() => {
@@ -67,7 +68,7 @@ export default function Result({ files, downloadUrl, onReset }: ResultProps) {
         </div>
       )}
 
-      {/* 추출된 파일 목록 */}
+      {/* 압축 해제 성공한 파일 목록 */}
       <Panel title={`${files.length} files`} subtitle={formatSize(totalSize)}>
         <List>
           {files.map((file) => (
@@ -75,6 +76,31 @@ export default function Result({ files, downloadUrl, onReset }: ResultProps) {
           ))}
         </List>
       </Panel>
+
+      {/* 압축 해제 실패한 ZIP 목록 */}
+      {failedItems.length > 0 && (
+        <details className="border-border group overflow-hidden rounded-lg border font-mono text-xs">
+          <summary className="bg-muted text-warning flex cursor-pointer list-none items-center justify-between px-4 py-2 select-none [&::-webkit-details-marker]:hidden">
+            <div className="flex items-center gap-2">
+              <ChevronDown className="size-3 transition-transform group-open:rotate-180" />
+              <span>실패 항목</span>
+            </div>
+
+            <span className="tabular-nums">{failedItems.length}개</span>
+          </summary>
+
+          <ul className="bg-background border-border flex flex-col gap-y-px border-t p-2">
+            {failedItems.map((item, i) => (
+              <li key={i} className="hover:bg-accent grid grid-cols-[1fr_auto] items-center gap-3 overflow-hidden rounded-md p-2 transition-colors">
+                <span title={item.name} className="text-secondary-foreground truncate text-[0.78125rem]">
+                  {item.name}
+                </span>
+                <span className="text-muted-foreground text-[0.78125rem] whitespace-nowrap">{item.reason}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </Card>
   );
 }

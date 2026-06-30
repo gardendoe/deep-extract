@@ -1,15 +1,13 @@
-import type { LogEntry } from '@/types';
 import { Loader, X } from 'lucide-react';
-import { Card, Progress, LogConsole, Button } from '@/components';
+import { Card, Progress, Button } from '@/components';
 
 type ExtractionProps = {
-  logs: LogEntry[];
   progress: number;
   totalArchives?: number;
   onCancel?: () => void;
 };
 
-export default function Extraction({ logs, progress, totalArchives = 0, onCancel }: ExtractionProps) {
+export default function Extraction({ progress, totalArchives = 0, onCancel }: ExtractionProps) {
   const processedArchives =
     totalArchives > 0 ? Math.min(Math.round((progress * totalArchives) / 90), totalArchives) : 0;
 
@@ -39,7 +37,6 @@ export default function Extraction({ logs, progress, totalArchives = 0, onCancel
       />
 
       <Progress value={progress} />
-      <LogConsole logs={logs} />
     </Card>
   );
 }

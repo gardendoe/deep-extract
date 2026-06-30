@@ -1,11 +1,3 @@
-export type LogType = 'line' | 'spacer';
-export type LogLevel = 'default' | 'info' | 'success' | 'warning' | 'error';
-export type LogEntry = {
-  id: string;
-  level: LogLevel;
-  message: string;
-};
-
 /**
  * 압축 해제 방식 (TODO)
  * - flatten: 압축 파일 내의 모든 일반 파일들을 단일 디렉터리로 추출 (현재 기능)
@@ -21,3 +13,13 @@ export interface UnpackOptions {
   mode: UnpackMode;
   encoding: string;
 }
+
+/**
+ * 압축 해제 실패한 파일 정보
+ * - `name`: 실패한 파일명
+ * - `reason`: 실패 사유
+ */
+export type FailedItem = {
+  name: string;
+  reason: string;
+};

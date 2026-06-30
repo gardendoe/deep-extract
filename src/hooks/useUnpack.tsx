@@ -98,12 +98,10 @@ export default function useUnpack() {
     }
 
     try {
-      const { skippedCount: preSkipped, errorCount: archiveErrors } = await Unpacker.unpackAsync(
+      const { skippedCount, errorCount } = await Unpacker.unpackAsync(
         files,
         optionsRef.current,
         {
-          onLog: (level, message) => dispatch({ type: 'LOG_ADDED', payload: { level, message } }),
-          onProgress: (progress) => dispatch({ type: 'PROGRESS_UPDATED', payload: progress }),
           onFile: async (file) => {
             const queued = await packer.enqueueFileAsync(file);
             if (queued) {
@@ -111,18 +109,21 @@ export default function useUnpack() {
               dispatch({ type: 'FILE_EXTRACTED', payload: { name: file.name, size: file.size } });
             }
           },
+          onProgress: (progress) => dispatch({ type: 'PROGRESS_UPDATED', payload: progress }),
+          onFailed: (item) => dispatch({ type: 'ITEM_FAILED', payload: item }),
         },
         signal,
       );
 
       if (await handleAbortedIf()) return;
 
+      // 큐에 파일이 없으면 Packer를 닫지 않고 중단한다.
       if (queuedCount === 0) {
-        // 큐에 파일이 없으면 Packer를 닫지 않고 중단
         await packer.abortAsync();
+
         if (await handleAbortedIf()) return;
 
-        const totalFailed = preSkipped + archiveErrors;
+        const totalFailed = skippedCount + errorCount;
         const message =
           totalFailed > 0
             ? '추출 가능한 파일이 없습니다. 압축 파일을 열거나 해제하지 못했습니다.'
@@ -134,18 +135,20 @@ export default function useUnpack() {
         return;
       }
 
-      dispatch({ type: 'LOG_ADDED', payload: { level: 'default', message: '\nZIP 마무리 중...' } });
-
       const { url, dispose, skippedCount: packSkipped, errorCount: packErrors } = await packer.finalizeAsync();
       disposeRef.current = dispose; // 다음 실행 or reset 시 정리하도록 보관
+
       if (await handleAbortedIf()) return;
+      if (packErrors > 0) {
+        dispatch({ type: 'ITEM_FAILED', payload: { name: '(재압축 단계)', reason: '재압축 오류' } });
+      }
 
       dispatch({ type: 'DOWNLOAD_URL_SET', payload: url });
       dispatch({ type: 'EXTRACTION_COMPLETED' });
 
-      // Unpacker 단계 실패 + Packer 단계 실패를 합산해 최종 결과를 표시한다.
-      const totalSkipped = preSkipped + packSkipped;
-      const totalErrors = archiveErrors + packErrors;
+      // Unpacker 단계 실패 + Packer 단계 실패를 합산해서 최종 결과를 표시한다.
+      const totalSkipped = skippedCount + packSkipped;
+      const totalErrors = errorCount + packErrors;
       const totalFailed = totalSkipped + totalErrors;
       const successCount = queuedCount - packSkipped - packErrors;
 
@@ -154,21 +157,8 @@ export default function useUnpack() {
           .filter(Boolean)
           .join(', ');
 
-        dispatch({
-          type: 'LOG_ADDED',
-          payload: {
-            level: 'warning',
-            message: `완료 (추출 성공: ${successCount}개, 실패: ${totalFailed}개 — ${detail})`,
-          },
-        });
-
         toast.warning(`${successCount}개 파일 추출 완료 (실패: ${totalFailed}개 — ${detail})`);
       } else {
-        dispatch({
-          type: 'LOG_ADDED',
-          payload: { level: 'success', message: `완료! 총 ${successCount}개 파일 추출됨` },
-        });
-
         toast.success(`${successCount}개 파일 추출 완료`);
       }
     } catch (error) {
@@ -176,8 +166,10 @@ export default function useUnpack() {
 
       // abort가 아닌 예외의 경우, Packer 정리 후 오류 상태로 전환한다.
       await packer.abortAsync();
-      dispatch({ type: 'EXTRACTION_FAILED', payload: String(error) });
-      toast.error('압축 해제 중 오류가 발생했습니다.');
+
+      const message = error instanceof Error ? error.message : String(error);
+      dispatch({ type: 'EXTRACTION_FAILED', payload: message });
+      toast.error(message);
     } finally {
       signal.removeEventListener('abort', abortPacker);
       abortControllerRef.current = null;

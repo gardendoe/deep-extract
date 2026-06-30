@@ -72,11 +72,10 @@ export default class Packer {
 
     worker.onmessage = ({ data }) => {
       // 파일 1개에 대한 응답
-      if (data.type === 'ACK' || data.type === 'FILE_SKIP' || data.type === 'FILE_ERROR') {
+      if (data.type === 'ACK' || data.type === 'FILE_ERROR') {
         packer.workerPending--; // 응답이 하나 왔으므로 workerPending을 줄인다.
 
-        if (data.type === 'FILE_SKIP') packer.skippedCount++;
-        else if (data.type === 'FILE_ERROR') packer.errorCount++;
+        if (data.type === 'FILE_ERROR') packer.errorCount++;
 
         // enqueueFileAsync()에서 빈 자리를 기다리던 대기자 하나를 깨운다.
         packer.workerAckWaiters.shift()?.();
