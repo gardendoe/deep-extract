@@ -136,6 +136,7 @@ class Batch {
         // 다른 ZIP도 신뢰할 수 없으므로, 에러를 위로 던져서 압축 해제 작업 전체를 중단한다.
         if (error instanceof ZipBombDetectedError) throw error;
 
+        // 예기치 못한 에러가 발생한 경우(손상된 ZIP 등 zip.js가 던진 에러), 해당 ZIP을 전체 실패 처리한다.
         callbacks.onFailed({ name: zip.name, reason: FailureReason.CORRUPTED });
       }
     }
@@ -246,10 +247,6 @@ class Pipeline {
         if (this.signal.aborted) break;
         await this.processEntryAsync(entry, totalBytes, process, onProgress);
       }
-    } catch (error) {
-      // 사용자가 취소해서 발생한 에러는 정상 흐름으로 간주하고 무시한다.
-      // 그 외 에러(ZIP 손상, Zip Bomb 의심 등)는 위로 던져서 Batch가 처리하도록 한다.
-      if (!this.signal.aborted) throw error;
     } finally {
       // 압축 해제 완료 후, reader를 닫고 메모리를 해제한다.
       await reader.close();
