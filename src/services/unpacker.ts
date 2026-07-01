@@ -177,7 +177,8 @@ class Pipeline {
     try {
       const entries = await this.reader.getEntries();
 
-      // ZIP 사전 검증 1: 항목 개수 상한 초과 시 ZIP 전체를 실패 처리한다.
+      // ZIP 사전 검증 (검증 실패 시 ZIP 전체 실패 처리)
+      // 1. 항목 개수 상한 초과 여부 검증
       const entryCount = entries.filter((entry) => !entry.directory).length;
       if (entryCount > ENTRIES_MAX_COUNT) {
         this.callbacks.onFailed({ name: this.zip.name, reason: FailureReason.TOO_MANY_ENTRIES });
@@ -189,20 +190,20 @@ class Pipeline {
       for (const entry of entries) {
         if (entry.directory) continue;
 
-        // ZIP 사전 검증 2: ZIP Central Directory에 선언된 압축 해제 후 크기가 0인 경우
-        // 손상된 ZIP 혹은 비표준 ZIP으로 간주하고 ZIP 전체 실패 처리
-        if (entry.compressedSize > 0 && entry.uncompressedSize === 0) {
+        // 2. ZIP Central Directory에 선언된 크기 검증
+        // 압축 크기와 압축 해제 후 크기 중 하나만 0인 경우, 손상된 ZIP 혹은 비표준 ZIP으로 간주
+        if ((entry.compressedSize === 0) !== (entry.uncompressedSize === 0)) {
           this.callbacks.onFailed({ name: this.zip.name, reason: FailureReason.SIZE_UNKNOWN });
           return null;
         }
 
-        // ZIP 사전 검증 3: 항목별 압축 비율 상한을 초과한 경우 ZIP 전체 실패 처리
+        // 3. 항목별 압축 비율 상한 초과 여부 검증
         if (entry.compressedSize > 0 && entry.uncompressedSize / entry.compressedSize > ENTRY_MAX_RATIO) {
           this.callbacks.onFailed({ name: this.zip.name, reason: FailureReason.RATIO_TOO_HIGH });
           return null;
         }
 
-        // ZIP 사전 검증 4: 항목별 출력 상한을 초과한 경우 ZIP 전체 실패 처리
+        // 4. 항목별 출력 상한 초과 여부 검증
         if (entry.uncompressedSize > ENTRY_MAX_UNCOMPRESSED) {
           this.callbacks.onFailed({ name: this.zip.name, reason: FailureReason.ENTRY_TOO_LARGE });
           return null;
@@ -210,7 +211,7 @@ class Pipeline {
 
         zipBytes += entry.uncompressedSize;
 
-        // ZIP 사전 검증 5: 총 예상 누적치(이전 ZIP 포함)가 총 출력 상한을 초과할 경우 ZIP 전체 실패 처리
+        // 5. 총 예상 누적치(이전 ZIP 포함)가 총 출력 상한을 초과하는지 여부 검증
         if (prevBytes + zipBytes > OUTPUT_MAX_TOTAL) {
           this.callbacks.onFailed({ name: this.zip.name, reason: FailureReason.OUTPUT_TOO_LARGE });
           return null;
@@ -222,7 +223,7 @@ class Pipeline {
 
       return zipBytes;
     } finally {
-      // 사전 검증 실패 시에는 reader가 더 이상 필요 없으므로 닫는다.
+      // 검증 실패 시에는 reader가 더 이상 필요 없으므로 닫는다.
       if (!validated) {
         await this.reader.close();
         this.reader = null;
@@ -272,11 +273,12 @@ class Pipeline {
   ): Promise<void> {
     if (entry.directory) return;
 
-    // Zip Slip 방어: 안전한 파일명만 추출
+    // 악성 파일 방어
+    // 1. Zip Slip: 안전한 파일명만 추출
     const safeName = basename(entry.filename);
     if (!safeName) return;
 
-    // Zip Bomb 방어: 스트리밍되는 실제 바이트를 직접 세면서 상한 재검증
+    // 2. Zip Bomb: 스트리밍되는 실제 바이트를 직접 세면서 상한 재검증
     let entryBytes = 0; // 현재 항목의 실제 누적 바이트
     let zipBombDetected = false;
 
