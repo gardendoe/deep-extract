@@ -9,7 +9,7 @@ import {
   ENTRY_MAX_UNCOMPRESSED,
   OUTPUT_MAX_TOTAL,
 } from '@/constants';
-import { ZipBombDetectedError, basename, deduplicateName } from '@/utils';
+import { InternalError, ZipBombDetectedError, basename, deduplicateName } from '@/utils';
 
 /** 압축 해제 진행/완료/오류를 UI로 알리기 위한 콜백 묶음 */
 type UnpackCallbacks = {
@@ -59,7 +59,7 @@ export default class Unpacker {
       try {
         void navigator.storage.persist();
       } catch (error) {
-        console.warn('[Unpacker] OPFS 영구 저장 권한 요청 실패:', error);
+        console.warn('OPFS 영구 저장 권한 요청 실패:', error);
       }
     }
 
@@ -86,12 +86,12 @@ export default class Unpacker {
           try {
             await root.removeEntry(name, { recursive: true });
           } catch (error) {
-            console.warn(`[Unpacker] OPFS 비활성 세션 폴더 삭제 실패 (${name}):`, error);
+            console.warn(`OPFS 비활성 세션 폴더 삭제 실패 (${name}):`, error);
           }
         });
       }
     } catch (error) {
-      console.warn('[Unpacker] OPFS 정리 실패:', error);
+      console.warn('OPFS 정리 실패:', error);
     }
   }
 }
@@ -240,7 +240,7 @@ class Pipeline {
    */
   async processZipAsync(totalBytes: number, process: { bytes: number }, onProgress: (progress: number) => void): Promise<void> {
     const reader = this.reader;
-    if (!reader) throw new Error('[Pipeline] ZIP 사전 검증 미수행');
+    if (!reader) throw new InternalError('ZIP 사전 검증 미수행');
 
     try {
       for (const entry of this.entries) {
@@ -292,7 +292,7 @@ class Pipeline {
         if (entryBytes > ENTRY_MAX_UNCOMPRESSED || this.output.bytes > OUTPUT_MAX_TOTAL) {
           this.output.bytes -= entryBytes;
           zipBombDetected = true;
-          throw new Error('entry limit exceeded');
+          throw new Error();
         }
 
         // 모든 검증을 통과한 경우 정상적으로 다음 단계(readable 쪽)로 청크를 전달한다.

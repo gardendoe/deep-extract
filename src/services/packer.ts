@@ -1,5 +1,6 @@
 import type { WorkerInMsg, WorkerOutMsg, WorkerResultMsg, UnpackedFile } from '@/types';
 import { WORKER_SUPPORTED, OPFS_SUPPORTED, LOCK_SUPPORTED, OPFS_SESSION_PREFIX } from '@/constants';
+import { InternalError, PackerError } from '@/utils';
 import WorkerProxy from './worker-proxy';
 
 /**
@@ -49,8 +50,6 @@ export default class Packer {
   /**
    * {@link Worker}를 띄우고, OPFS 세션 폴더 생성 + Web Lock을 취득한다.
    * @returns 생성된 {@link Packer} 인스턴스, Worker 또는 OPFS를 지원하지 않는 브라우저의 경우 `null`
-   * @example const packer = Packer.create();
-   *          if (!packer) throw new Error('Not supported');
    */
   static create(): Packer | null {
     if (!WORKER_SUPPORTED || !OPFS_SUPPORTED) return null;
@@ -149,14 +148,14 @@ export default class Packer {
    * @returns `{ url: 다운로드 URL, dispose: URL 해제 + OPFS 세션 폴더 삭제 + Web Lock 해제 함수 }`
    */
   async finalizeAsync(): Promise<{ url: string; dispose: () => Promise<void> }> {
-    if (!this.workerResultPromise) throw new Error('내부 오류: 워커 결과 Promise가 없습니다.');
+    if (!this.workerResultPromise) throw new InternalError('workerResultPromise가 없습니다.');
 
     // workerSessionName을 null로 비워서 OPFS 세션 폴더 소유권을 가져온다.
     // 이후 abortAsync()가 호출돼도 중복으로 폴더를 건드리지 않는다.
     const sessionName = this.workerSessionName;
     this.workerSessionName = null;
 
-    if (!this.worker) throw new Error('내부 오류: 워커가 이미 종료됐습니다.');
+    if (!this.worker) throw new InternalError('워커가 이미 종료됐습니다.');
     this.worker.postMessage({ type: 'FINALIZE' });
 
     // 워커가 ZIP을 마무리하고 최종 응답을 보낼 때까지 대기한다.
@@ -164,14 +163,14 @@ export default class Packer {
     this.worker?.terminate(); // await 중 abortAsync()가 호출되어 worker가 null이 됐을 수 있으므로 옵셔널 체이닝으로 방어
     this.worker = null;
 
-    // 실패 시 불완전한 결과물을 정리하고 Web Lock을 해제한다.
+    // ERROR 시 불완전한 결과물을 정리하고 Web Lock을 해제한다.
     if (result.type === 'ERROR') {
       if (sessionName) await Packer.deleteOpfsSessionAsync(sessionName);
       this.releaseLock();
-      throw new Error(result.message);
+      throw new PackerError(result.message);
     }
 
-    if (!sessionName) throw new Error('OPFS 세션 폴더가 존재하지 않습니다.');
+    if (!sessionName) throw new InternalError('OPFS 세션 폴더가 존재하지 않습니다.');
 
     // OPFS에 완성된 압축 결과물을 열어서 다운로드 URL로 변환한다.
     const url = await Packer.createDownloadUrlAsync(sessionName);
