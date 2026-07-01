@@ -1,5 +1,6 @@
 import type { UnpackOptions } from '@/types';
 import { useReducer, useRef, useCallback, useEffect } from 'react';
+import { errorMessage } from '@/utils';
 import { Unpacker, Packer } from '@/services';
 import { unpackReducer, initialState } from './unpackReducer';
 
@@ -130,7 +131,7 @@ export default function useUnpack() {
 
       // abort가 아닌 실제 런타임 오류의 경우, Packer 자원을 정리하고 ERROR 상태로 전환한다.
       await packer.abortAsync();
-      dispatch({ type: 'ERROR', payload: error instanceof Error ? error.message : String(error) });
+      dispatch({ type: 'ERROR', payload: errorMessage(error) });
     } finally {
       signal.removeEventListener('abort', abortPacker);
       abortControllerRef.current = null;

@@ -1,6 +1,7 @@
 import type { WorkerInMsg, WorkerOutMsg } from '@/types';
 import { ZipWriter } from '@zip.js/zip.js';
 import { OUTPUT_ZIP_NAME } from '@/constants';
+import { ZipCorruptedError, errorMessage, isAbortError } from '@/utils';
 
 /** 워커 내부에서 파일 1개를 나타내는 단위 */
 type FileItem = {
@@ -129,15 +130,12 @@ class WorkerSession {
           await zipWriter.add(item.name, item.stream, { signal });
           postMessage({ type: 'ACK' });
         } catch (error) {
-          if (signal.aborted || (error instanceof Error && error.name === 'AbortError')) throw error;
+          if (signal.aborted || isAbortError(error)) throw error;
 
           // hasCorruptedEntries가 true이면 ZIP 구조가 손상됐을 수 있으므로 세션 전체를 에러 처리한다.
-          if (zipWriter.hasCorruptedEntries) throw error instanceof Error ? error : new Error(String(error));
+          if (zipWriter.hasCorruptedEntries) throw new ZipCorruptedError(error);
 
-          postMessage({
-            type: 'FILE_ERROR',
-            message: error instanceof Error ? error.message : String(error),
-          });
+          postMessage({ type: 'FILE_ERROR', message: errorMessage(error) });
         }
       }
     } catch (error) {
@@ -148,11 +146,7 @@ class WorkerSession {
         // writable이 이미 닫혔거나 abort된 경우 무시한다.
       }
 
-      const isAbort = error instanceof Error && error.name === 'AbortError';
-      postMessage({
-        type: 'ERROR',
-        message: isAbort ? 'aborted' : error instanceof Error ? error.message : String(error),
-      });
+      postMessage({ type: 'ERROR', message: isAbortError(error) ? 'aborted' : errorMessage(error) });
     }
   }
 }
@@ -166,5 +160,5 @@ self.addEventListener('message', ({ data }: MessageEvent<WorkerInMsg>) => {
 
 // runAsync()의 미처리 예외를 ERROR 메시지로 변환해 메인 스레드에 알린다.
 session.runAsync().catch((error) => {
-  postMessage({ type: 'ERROR', message: error instanceof Error ? error.message : String(error) });
+  postMessage({ type: 'ERROR', message: errorMessage(error) });
 });
