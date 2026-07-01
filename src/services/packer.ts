@@ -161,7 +161,7 @@ export default class Packer {
 
     // 워커가 ZIP을 마무리하고 최종 응답을 보낼 때까지 대기한다.
     const result = await this.workerResultPromise;
-    this.worker.terminate();
+    this.worker?.terminate(); // await 중 abortAsync()가 호출되어 worker가 null이 됐을 수 있으므로 옵셔널 체이닝으로 방어
     this.worker = null;
 
     // 실패 시 불완전한 결과물을 정리하고 Web Lock을 해제한다.
@@ -209,10 +209,8 @@ export default class Packer {
       }
 
       // 타임아웃으로 끝난 경우, workerResultPromise를 기다리는 쪽이 멈추지 않도록 강제로 ERROR를 채운다.
-      if (!workerResponded) {
-        this.workerResultResolve?.({ type: 'ERROR', message: 'aborted' });
-      }
-      this.worker.terminate();
+      if (!workerResponded) this.workerResultResolve?.({ type: 'ERROR', message: 'aborted' });
+      this.worker?.terminate();
       this.worker = null;
 
       // enqueueFileAsync()에서 빈 자리를 기다리던 대기자들을 깨워서 false를 반환하고 빠져나가도록 한다.
